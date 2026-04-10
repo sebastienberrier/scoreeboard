@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── Background circle: left half pink ── -->
+    <path
+        android:fillColor="#F4A8BC"
+        android:pathData="M54,23 A31,31 0 0 0 54,85 Z"/>
+    <!-- ── Background circle: right half mint ── -->
+    <path
+        android:fillColor="#8DCBB0"
+        android:pathData="M54,23 A31,31 0 0 1 54,85 Z"/>
+
+    <!-- ── Notepad outer dark border ── -->
+    <path
+        android:fillColor="#1C1C2E"
+        android:pathData="M34,34 L66,34 A4,4 0 0 1 70,38 L70,84 A4,4 0 0 1 66,88 L34,88 A4,4 0 0 1 30,84 L30,38 A4,4 0 0 1 34,34 Z"/>
+
+    <!-- ── Notepad pink face ── -->
+    <path
+        android:fillColor="#F4A8BC"
+        android:pathData="M35,36 L65,36 A3,3 0 0 1 68,39 L68,84 A3,3 0 0 1 65,87 L35,87 A3,3 0 0 1 32,84 L32,39 A3,3 0 0 1 35,36 Z"/>
+
+    <!-- ── Notepad dark inner content area ── -->
+    <path
+        android:fillColor="#1C1C2E"
+        android:pathData="M35,46 L65,46 L65,83 L35,83 Z"/>
+
+    <!-- ── Spiral ring 1: dark outer oval ── -->
+    <path
+        android:fillColor="#1C1C2E"
+        android:pathData="M38,35 A5,6 0 1 0 48,35 A5,6 0 1 0 38,35 Z"/>
+    <!-- ── Spiral ring 1: mint inner oval ── -->
+    <path
+        android:fillColor="#8DCBB0"
+        android:pathData="M40,35 A3,4 0 1 0 46,35 A3,4 0 1 0 40,35 Z"/>
+
+    <!-- ── Spiral ring 2: dark outer oval ── -->
+    <path
+        android:fillColor="#1C1C2E"
+        android:pathData="M52,35 A5,6 0 1 0 62,35 A5,6 0 1 0 52,35 Z"/>
+    <!-- ── Spiral ring 2: mint inner oval ── -->
+    <path
+        android:fillColor="#8DCBB0"
+        android:pathData="M54,35 A3,4 0 1 0 60,35 A3,4 0 1 0 54,35 Z"/>
+
+    <!-- ── Checkmark row 1 ── -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8DCBB0"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M37,55 L40,59 L47,50"/>
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8DCBB0"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M51,54 L63,54"/>
+
+    <!-- ── Checkmark row 2 ── -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8DCBB0"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M37,64 L40,68 L47,59"/>
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8DCBB0"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M51,63 L63,63"/>
+
+    <!-- ── Checkmark row 3 ── -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8DCBB0"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M37,73 L40,77 L47,68"/>
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#8DCBB0"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M51,72 L63,72"/>
+
+    <!-- ── Pencil (rotated -45° around lower-right pivot) ── -->
+    <group
+        android:pivotX="72"
+        android:pivotY="78"
+        android:rotation="-45">
+        <!-- Mint eraser cap -->
+        <path
+            android:fillColor="#8DCBB0"
+            android:pathData="M67,57 L77,57 L77,63 L67,63 Z"/>
+        <!-- Pink body -->
+        <path
+            android:fillColor="#F4A8BC"
+            android:pathData="M67,63 L77,63 L77,81 L67,81 Z"/>
+        <!-- Dark tip -->
+        <path
+            android:fillColor="#1C1C2E"
+            android:pathData="M67,81 L77,81 L72,89 Z"/>
+        <!-- Mint graphite point -->
+        <path
+            android:fillColor="#8DCBB0"
+            android:pathData="M69,84 L75,84 L72,89 Z"/>
+        <!-- Full outline -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#1C1C2E"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M67,57 L77,57 L77,81 L72,89 L67,81 Z"/>
+        <!-- Cap separator line -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#1C1C2E"
+            android:strokeWidth="1.5"
+            android:pathData="M67,63 L77,63"/>
+    </group>
+
+</vector>
