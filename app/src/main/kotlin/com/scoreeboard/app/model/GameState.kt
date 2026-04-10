@@ -1,9 +1,12 @@
 package com.scoreeboard.app.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Immutable identity of a player.
  * [id] is the 0-based index assigned at setup time.
  */
+@Serializable
 data class Player(
     val id: Int,
     val name: String
@@ -13,7 +16,9 @@ data class Player(
  * Scores submitted for a single round.
  * [scores] maps each Player.id to the points earned in that round.
  * A missing entry defaults to 0.
+ * Note: Int keys are serialized as strings in JSON, which round-trips correctly.
  */
+@Serializable
 data class Round(
     val number: Int,           // 1-based display number
     val scores: Map<Int, Int>  // key = Player.id

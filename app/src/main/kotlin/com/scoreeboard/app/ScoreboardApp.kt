@@ -1,29 +1,25 @@
 package com.scoreeboard.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.scoreeboard.app.navigation.GameRoute
+import com.scoreeboard.app.navigation.HistoryRoute
 import com.scoreeboard.app.navigation.SetupRoute
 import com.scoreeboard.app.navigation.SummaryRoute
 import com.scoreeboard.app.ui.game.GameScreen
+import com.scoreeboard.app.ui.history.HistoryScreen
 import com.scoreeboard.app.ui.setup.SetupScreen
 import com.scoreeboard.app.ui.summary.SummaryScreen
 import com.scoreeboard.app.viewmodel.GameViewModel
 
-/**
- * Root composable: owns the NavController and wires the three screens to the
- * shared [GameViewModel].
- *
- * Navigation strategy: each transition clears its own destination from the
- * back-stack with [popUpTo] { inclusive = true }, so the Android back button
- * never returns to a stale screen. From [GameRoute] it exits the app (correct
- * behaviour — the user should not lose the game by accident).
- */
 @Composable
 fun ScoreboardApp(vm: GameViewModel) {
     val navController = rememberNavController()
+    val history by vm.history.collectAsStateWithLifecycle()
 
     NavHost(
         navController = navController,
@@ -36,7 +32,17 @@ fun ScoreboardApp(vm: GameViewModel) {
                     navController.navigate(GameRoute) {
                         popUpTo(SetupRoute) { inclusive = true }
                     }
+                },
+                onShowHistory = {
+                    navController.navigate(HistoryRoute)
                 }
+            )
+        }
+
+        composable<HistoryRoute> {
+            HistoryScreen(
+                history = history,
+                onBack = { navController.popBackStack() }
             )
         }
 

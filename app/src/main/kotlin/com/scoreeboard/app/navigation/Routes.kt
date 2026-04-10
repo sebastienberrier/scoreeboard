@@ -10,3 +10,4 @@ import kotlinx.serialization.Serializable
 @Serializable object SetupRoute
 @Serializable object GameRoute
 @Serializable object SummaryRoute
+@Serializable object HistoryRoute

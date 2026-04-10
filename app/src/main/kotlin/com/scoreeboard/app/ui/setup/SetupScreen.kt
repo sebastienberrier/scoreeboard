@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,10 +25,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,20 +42,27 @@ private const val MAX_PLAYERS = 6
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupScreen(
-    onStartGame: (title: String, playerNames: List<String>) -> Unit
+    onStartGame: (title: String, playerNames: List<String>) -> Unit,
+    onShowHistory: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
-    var playerCount by remember { mutableIntStateOf(MIN_PLAYERS) }
 
-    // One mutable state per player slot; list is recreated when playerCount changes.
-    val playerNames = remember(playerCount) {
-        List(playerCount) { mutableStateOf("") }
-    }
+    // SnapshotStateList: add/remove items without losing existing values.
+    val playerNames = remember { mutableStateListOf("", "") }
 
-    val canStart = playerNames.all { it.value.isNotBlank() }
+    val canStart = playerNames.all { it.isNotBlank() }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("New Game") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("New Game") },
+                actions = {
+                    IconButton(onClick = onShowHistory) {
+                        Icon(Icons.Default.History, contentDescription = "Game history")
+                    }
+                }
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -86,35 +94,39 @@ fun SetupScreen(
             ) {
                 Text("Players:", modifier = Modifier.weight(1f))
                 IconButton(
-                    onClick = { if (playerCount > MIN_PLAYERS) playerCount-- },
-                    enabled = playerCount > MIN_PLAYERS
+                    onClick = {
+                        if (playerNames.size > MIN_PLAYERS) playerNames.removeLastOrNull()
+                    },
+                    enabled = playerNames.size > MIN_PLAYERS
                 ) {
                     Text("−", style = MaterialTheme.typography.titleLarge)
                 }
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = playerCount.toString(),
+                    text = playerNames.size.toString(),
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 IconButton(
-                    onClick = { if (playerCount < MAX_PLAYERS) playerCount++ },
-                    enabled = playerCount < MAX_PLAYERS
+                    onClick = {
+                        if (playerNames.size < MAX_PLAYERS) playerNames.add("")
+                    },
+                    enabled = playerNames.size < MAX_PLAYERS
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add player")
                 }
             }
 
             // ── Player name fields ───────────────────────────────────────
-            playerNames.forEachIndexed { index, nameState ->
+            playerNames.forEachIndexed { index, name ->
                 OutlinedTextField(
-                    value = nameState.value,
-                    onValueChange = { nameState.value = it },
+                    value = name,
+                    onValueChange = { playerNames[index] = it },
                     label = { Text("Player ${index + 1}") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
-                        imeAction = if (index < playerCount - 1) ImeAction.Next else ImeAction.Done
+                        imeAction = if (index < playerNames.lastIndex) ImeAction.Next else ImeAction.Done
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -124,9 +136,7 @@ fun SetupScreen(
 
             // ── Start button ─────────────────────────────────────────────
             Button(
-                onClick = {
-                    onStartGame(title, playerNames.map { it.value })
-                },
+                onClick = { onStartGame(title, playerNames.toList()) },
                 enabled = canStart,
                 modifier = Modifier.fillMaxWidth()
             ) {

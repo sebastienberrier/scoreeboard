@@ -1,7 +1,9 @@
 package com.scoreeboard.app.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.scoreeboard.app.data.GamesRepository
 import com.scoreeboard.app.model.GamePhase
+import com.scoreeboard.app.model.GameRecord
 import com.scoreeboard.app.model.GameState
 import com.scoreeboard.app.model.Player
 import com.scoreeboard.app.model.Round
@@ -9,29 +11,33 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GameViewModel : ViewModel() {
+class GameViewModel(private val repository: GamesRepository) : ViewModel() {
 
-    // ── Exposed state ────────────────────────────────────────────────────────
+    // ── Active game state ────────────────────────────────────────────────────
 
-    /** Single source of truth for the game session. */
+    /** Single source of truth for the current game session. */
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
     /**
      * Draft scores being entered for the current round.
-     * Values are kept as [String] so that blank fields are not coerced to "0"
-     * and validation can be handled independently of parsing.
+     * Values are [String] so blank fields are never coerced to "0".
      * Key = Player.id.
      */
     private val _draftScores = MutableStateFlow<Map<Int, String>>(emptyMap())
     val draftScores: StateFlow<Map<Int, String>> = _draftScores.asStateFlow()
 
+    // ── History state ────────────────────────────────────────────────────────
+
+    private val _history = MutableStateFlow<List<GameRecord>>(emptyList())
+    val history: StateFlow<List<GameRecord>> = _history.asStateFlow()
+
+    init {
+        _history.value = repository.loadAll()
+    }
+
     // ── Setup ────────────────────────────────────────────────────────────────
 
-    /**
-     * Transition from SETUP → PLAYING.
-     * Blank names are replaced with "Player N".
-     */
     fun startGame(title: String, playerNames: List<String>) {
         require(playerNames.size in 2..6) { "Player count must be between 2 and 6." }
         val players = playerNames.mapIndexed { idx, name ->
@@ -48,15 +54,10 @@ class GameViewModel : ViewModel() {
 
     // ── In-game ──────────────────────────────────────────────────────────────
 
-    /** Update one player's draft score while they are typing. */
     fun updateDraftScore(playerId: Int, raw: String) {
         _draftScores.value = _draftScores.value + (playerId to raw)
     }
 
-    /**
-     * Commit the current draft as a new [Round].
-     * Blank or invalid entries are treated as 0 (graceful degradation).
-     */
     fun submitRound() {
         val state = _gameState.value
         val roundNumber = state.rounds.size + 1
@@ -68,12 +69,23 @@ class GameViewModel : ViewModel() {
         resetDraft(state.players)
     }
 
-    /** Transition from PLAYING → SUMMARY. */
+    /** Transition PLAYING → SUMMARY and persist the completed game. */
     fun endGame() {
-        _gameState.value = _gameState.value.copy(phase = GamePhase.SUMMARY)
+        val state = _gameState.value
+        _gameState.value = state.copy(phase = GamePhase.SUMMARY)
+
+        val record = GameRecord(
+            id       = System.currentTimeMillis().toString(),
+            title    = state.title,
+            playedAt = System.currentTimeMillis(),
+            players  = state.players,
+            rounds   = state.rounds
+        )
+        repository.saveGame(record)
+        _history.value = repository.loadAll()
     }
 
-    /** Abandon the current game and return to SETUP without showing results. */
+    /** Abandon the current game and return to SETUP without saving. */
     fun abortGame() {
         _gameState.value = GameState()
         _draftScores.value = emptyMap()
@@ -81,7 +93,6 @@ class GameViewModel : ViewModel() {
 
     // ── Summary ──────────────────────────────────────────────────────────────
 
-    /** Reset everything back to the initial SETUP state. */
     fun newGame() {
         _gameState.value = GameState()
         _draftScores.value = emptyMap()
@@ -93,10 +104,6 @@ class GameViewModel : ViewModel() {
         _draftScores.value = players.associate { it.id to "" }
     }
 
-    /**
-     * Returns true if every draft field is either blank or a valid integer.
-     * Used to enable/disable the "Submit Round" button.
-     */
     fun isDraftValid(): Boolean =
         _draftScores.value.values.all { it.isBlank() || it.toIntOrNull() != null }
 }
