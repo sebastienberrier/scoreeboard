@@ -1,6 +1,7 @@
 package com.scoreeboard.app.ui.game
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.scoreeboard.app.model.GameState
 import com.scoreeboard.app.model.Player
+import com.scoreeboard.app.model.Round
 import com.scoreeboard.app.viewmodel.GameViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +59,11 @@ fun GameScreen(
 
     var showEndDialog   by remember { mutableStateOf(false) }
     var showAbortDialog by remember { mutableStateOf(false) }
+
+    // Round being edited (null = dialog closed)
+    var editingRound by remember { mutableStateOf<Round?>(null) }
+    // Local draft for the edit dialog — SnapshotStateMap triggers recomposition on change
+    val editDraft = remember { mutableStateMapOf<Int, String>() }
 
     val topBarTitle = state.title.ifBlank { "scoreeboard" }
 
@@ -100,6 +110,45 @@ fun GameScreen(
         )
     }
 
+    // ── Edit round dialog ────────────────────────────────────────────────────
+    editingRound?.let { round ->
+        val isEditValid = editDraft.values.all { it.isBlank() || it.toIntOrNull() != null }
+        AlertDialog(
+            onDismissRequest = { editingRound = null },
+            title = { Text("Edit Round ${round.number}") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    state.players.forEachIndexed { index, player ->
+                        ScoreInputRow(
+                            player = player,
+                            value = editDraft[player.id] ?: "",
+                            onValueChange = { editDraft[player.id] = it },
+                            isLast = index == state.players.lastIndex
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val newScores = state.players.associate { p ->
+                            p.id to (editDraft[p.id]?.toIntOrNull() ?: 0)
+                        }
+                        vm.updateRound(round.number, newScores)
+                        editingRound = null
+                    },
+                    enabled = isEditValid
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingRound = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = { TopAppBar(title = { Text(topBarTitle) }) }
     ) { padding ->
@@ -111,6 +160,12 @@ fun GameScreen(
             // ── Scoreboard table ─────────────────────────────────────────
             ScoreboardTable(
                 state = state,
+                onEditRound = { round ->
+                    // Pre-fill the edit draft with current scores for this round
+                    editDraft.clear()
+                    editDraft.putAll(round.scores.mapValues { it.value.toString() })
+                    editingRound = round
+                },
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 8.dp)
@@ -188,6 +243,7 @@ fun GameScreen(
 @Composable
 private fun ScoreboardTable(
     state: GameState,
+    onEditRound: (Round) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -199,6 +255,7 @@ private fun ScoreboardTable(
     }
 
     Column(modifier = modifier) {
+        // ── Header ───────────────────────────────────────────────────────
         TableRow(
             label = "Round",
             players = state.players,
@@ -208,6 +265,7 @@ private fun ScoreboardTable(
 
         HorizontalDivider()
 
+        // ── Per-round rows (tappable) ────────────────────────────────────
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f)
@@ -216,13 +274,15 @@ private fun ScoreboardTable(
                 TableRow(
                     label = round.number.toString(),
                     players = state.players,
-                    getValue = { p -> (round.scores[p.id] ?: 0).toString() }
+                    getValue = { p -> (round.scores[p.id] ?: 0).toString() },
+                    modifier = Modifier.clickable { onEditRound(round) }
                 )
             }
         }
 
         HorizontalDivider()
 
+        // ── Totals row ───────────────────────────────────────────────────
         TableRow(
             label = "Total",
             players = state.players,
@@ -230,6 +290,16 @@ private fun ScoreboardTable(
             isBold = true,
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
         )
+
+        // ── Edit hint ────────────────────────────────────────────────────
+        if (state.rounds.isNotEmpty()) {
+            Text(
+                text = "Tap a round to edit",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
     }
 }
 

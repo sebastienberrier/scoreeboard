@@ -69,6 +69,16 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
         resetDraft(state.players)
     }
 
+    /** Replace the scores of an already-submitted round. */
+    fun updateRound(roundNumber: Int, newScores: Map<Int, Int>) {
+        val state = _gameState.value
+        _gameState.value = state.copy(
+            rounds = state.rounds.map { round ->
+                if (round.number == roundNumber) round.copy(scores = newScores) else round
+            }
+        )
+    }
+
     /** Transition PLAYING → SUMMARY and persist the completed game. */
     fun endGame() {
         val state = _gameState.value
