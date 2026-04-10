@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\gradle\\\\wrapper\")",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\navigation\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\model\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\viewmodel\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\ui\\\\theme\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\ui\\\\setup\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\ui\\\\game\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\kotlin\\\\com\\\\scoreeboard\\\\app\\\\ui\\\\summary\")",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Dev\\\\scoreeboard\\\\app\\\\src\\\\main\\\\res\\\\values\")",
+      "Bash(Write-Host \"Directories created.\")",
+      "Bash(curl -L -o /c/Dev/scoreeboard/gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar --silent --show-error)"
+    ]
+  }
+}
