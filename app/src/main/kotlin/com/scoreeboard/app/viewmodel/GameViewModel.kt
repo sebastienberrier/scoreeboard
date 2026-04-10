@@ -73,6 +73,12 @@ class GameViewModel : ViewModel() {
         _gameState.value = _gameState.value.copy(phase = GamePhase.SUMMARY)
     }
 
+    /** Abandon the current game and return to SETUP without showing results. */
+    fun abortGame() {
+        _gameState.value = GameState()
+        _draftScores.value = emptyMap()
+    }
+
     // ── Summary ──────────────────────────────────────────────────────────────
 
     /** Reset everything back to the initial SETUP state. */

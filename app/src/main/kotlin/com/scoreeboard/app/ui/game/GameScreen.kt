@@ -13,21 +13,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,27 +45,63 @@ import com.scoreeboard.app.viewmodel.GameViewModel
 @Composable
 fun GameScreen(
     vm: GameViewModel,
-    onEndGame: () -> Unit
+    onEndGame: () -> Unit,
+    onAbortGame: () -> Unit
 ) {
     val state by vm.gameState.collectAsStateWithLifecycle()
     val draftScores by vm.draftScores.collectAsStateWithLifecycle()
-    val isDraftValid by androidx.compose.runtime.remember {
-        androidx.compose.runtime.derivedStateOf { vm.isDraftValid() }
-    }
+    val isDraftValid by remember { derivedStateOf { vm.isDraftValid() } }
+
+    var showEndDialog   by remember { mutableStateOf(false) }
+    var showAbortDialog by remember { mutableStateOf(false) }
 
     val topBarTitle = state.title.ifBlank { "scoreeboard" }
 
+    // ── End game confirmation dialog ─────────────────────────────────────────
+    if (showEndDialog) {
+        AlertDialog(
+            onDismissRequest = { showEndDialog = false },
+            title = { Text("End game?") },
+            text  = { Text("This will display the final scores and declare a winner.") },
+            confirmButton = {
+                Button(onClick = {
+                    showEndDialog = false
+                    vm.endGame()
+                    onEndGame()
+                }) { Text("End Game") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // ── Abort game confirmation dialog ───────────────────────────────────────
+    if (showAbortDialog) {
+        AlertDialog(
+            onDismissRequest = { showAbortDialog = false },
+            title = { Text("Abort game?") },
+            text  = { Text("All scores will be lost. This cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showAbortDialog = false
+                        vm.abortGame()
+                        onAbortGame()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text("Abort") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAbortDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(topBarTitle) },
-                actions = {
-                    IconButton(onClick = onEndGame) {
-                        Icon(Icons.Default.Close, contentDescription = "End game")
-                    }
-                }
-            )
-        }
+        topBar = { TopAppBar(title = { Text(topBarTitle) }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -82,7 +122,7 @@ fun GameScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -113,6 +153,32 @@ fun GameScreen(
                     }
                 }
             }
+
+            // ── End / Abort buttons ──────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { showAbortDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Abort Game")
+                }
+                Button(
+                    onClick = { showEndDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("End Game")
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -126,7 +192,6 @@ private fun ScoreboardTable(
 ) {
     val listState = rememberLazyListState()
 
-    // Auto-scroll to the latest round whenever a new one is added.
     LaunchedEffect(state.rounds.size) {
         if (state.rounds.isNotEmpty()) {
             listState.animateScrollToItem(state.rounds.size - 1)
@@ -134,7 +199,6 @@ private fun ScoreboardTable(
     }
 
     Column(modifier = modifier) {
-        // ── Header row ───────────────────────────────────────────────────
         TableRow(
             label = "Round",
             players = state.players,
@@ -144,7 +208,6 @@ private fun ScoreboardTable(
 
         HorizontalDivider()
 
-        // ── Per-round rows ───────────────────────────────────────────────
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f)
@@ -160,7 +223,6 @@ private fun ScoreboardTable(
 
         HorizontalDivider()
 
-        // ── Totals row ───────────────────────────────────────────────────
         TableRow(
             label = "Total",
             players = state.players,

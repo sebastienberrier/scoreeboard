@@ -44,8 +44,12 @@ fun ScoreboardApp(vm: GameViewModel) {
             GameScreen(
                 vm = vm,
                 onEndGame = {
-                    vm.endGame()
                     navController.navigate(SummaryRoute) {
+                        popUpTo(GameRoute) { inclusive = true }
+                    }
+                },
+                onAbortGame = {
+                    navController.navigate(SetupRoute) {
                         popUpTo(GameRoute) { inclusive = true }
                     }
                 }
