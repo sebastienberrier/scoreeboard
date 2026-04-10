@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,7 +57,7 @@ fun GameScreen(
                 title = { Text(topBarTitle) },
                 actions = {
                     IconButton(onClick = onEndGame) {
-                        Icon(Icons.Default.Stop, contentDescription = "End game")
+                        Icon(Icons.Default.Close, contentDescription = "End game")
                     }
                 }
             )
@@ -176,9 +176,9 @@ private fun TableRow(
     label: String,
     players: List<Player>,
     getValue: (Player) -> String,
+    modifier: Modifier = Modifier,
     isHeader: Boolean = false,
-    isBold: Boolean = false,
-    modifier: Modifier = Modifier
+    isBold: Boolean = false
 ) {
     val style = when {
         isHeader -> MaterialTheme.typography.titleSmall
