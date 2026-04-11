@@ -16,12 +16,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -51,23 +55,24 @@ import com.scoreeboard.app.viewmodel.GameViewModel
 fun GameScreen(
     vm: GameViewModel,
     onEndGame: () -> Unit,
-    onAbortGame: () -> Unit
+    onAbortGame: () -> Unit,
+    onResumeLater: () -> Unit
 ) {
     val state by vm.gameState.collectAsStateWithLifecycle()
     val draftScores by vm.draftScores.collectAsStateWithLifecycle()
     val isDraftValid by remember { derivedStateOf { vm.isDraftValid() } }
 
-    var showEndDialog   by remember { mutableStateOf(false) }
-    var showAbortDialog by remember { mutableStateOf(false) }
+    var showEndDialog    by remember { mutableStateOf(false) }
+    var showAbortDialog  by remember { mutableStateOf(false) }
+    var showResumeDialog by remember { mutableStateOf(false) }
 
     // Round being edited (null = dialog closed)
     var editingRound by remember { mutableStateOf<Round?>(null) }
-    // Local draft for the edit dialog — SnapshotStateMap triggers recomposition on change
     val editDraft = remember { mutableStateMapOf<Int, String>() }
 
-    val topBarTitle = state.title.ifBlank { "scoreeboard" }
+    val topBarTitle = state.title.ifBlank { "ScoreeBoard" }
 
-    // ── End game confirmation dialog ─────────────────────────────────────────
+    // ── End game dialog ──────────────────────────────────────────────────────
     if (showEndDialog) {
         AlertDialog(
             onDismissRequest = { showEndDialog = false },
@@ -86,7 +91,7 @@ fun GameScreen(
         )
     }
 
-    // ── Abort game confirmation dialog ───────────────────────────────────────
+    // ── Abort game dialog ────────────────────────────────────────────────────
     if (showAbortDialog) {
         AlertDialog(
             onDismissRequest = { showAbortDialog = false },
@@ -106,6 +111,25 @@ fun GameScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAbortDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // ── Resume later dialog ──────────────────────────────────────────────────
+    if (showResumeDialog) {
+        AlertDialog(
+            onDismissRequest = { showResumeDialog = false },
+            title = { Text("Save and quit?") },
+            text  = { Text("The game will be saved. You can resume it from the home screen.") },
+            confirmButton = {
+                Button(onClick = {
+                    showResumeDialog = false
+                    vm.saveDraft()
+                    onResumeLater()
+                }) { Text("Save & Quit") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResumeDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -150,18 +174,31 @@ fun GameScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(topBarTitle) }) }
+        topBar = {
+            TopAppBar(
+                title = { Text(topBarTitle) },
+                actions = {
+                    // Abort moved to top-right as an icon button
+                    IconButton(onClick = { showAbortDialog = true }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Abort game",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // ── Scoreboard table ─────────────────────────────────────────
+            // ── Scoreboard table ─────────────────────────────────────────────
             ScoreboardTable(
                 state = state,
                 onEditRound = { round ->
-                    // Pre-fill the edit draft with current scores for this round
                     editDraft.clear()
                     editDraft.putAll(round.scores.mapValues { it.value.toString() })
                     editingRound = round
@@ -173,7 +210,7 @@ fun GameScreen(
 
             HorizontalDivider()
 
-            // ── Round input card ─────────────────────────────────────────
+            // ── Round input card ─────────────────────────────────────────────
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -209,7 +246,7 @@ fun GameScreen(
                 }
             }
 
-            // ── End / Abort buttons ──────────────────────────────────────
+            // ── Resume Later | End Game ──────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -217,13 +254,10 @@ fun GameScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { showAbortDialog = true },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    onClick = { showResumeDialog = true },
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text("Abort Game")
+                    Text("Resume Later")
                 }
                 Button(
                     onClick = { showEndDialog = true },
@@ -255,7 +289,6 @@ private fun ScoreboardTable(
     }
 
     Column(modifier = modifier) {
-        // ── Header ───────────────────────────────────────────────────────
         TableRow(
             label = "Round",
             players = state.players,
@@ -265,7 +298,6 @@ private fun ScoreboardTable(
 
         HorizontalDivider()
 
-        // ── Per-round rows (tappable) ────────────────────────────────────
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f)
@@ -282,7 +314,6 @@ private fun ScoreboardTable(
 
         HorizontalDivider()
 
-        // ── Totals row ───────────────────────────────────────────────────
         TableRow(
             label = "Total",
             players = state.players,
@@ -291,7 +322,6 @@ private fun ScoreboardTable(
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
         )
 
-        // ── Edit hint ────────────────────────────────────────────────────
         if (state.rounds.isNotEmpty()) {
             Text(
                 text = "Tap a round to edit",

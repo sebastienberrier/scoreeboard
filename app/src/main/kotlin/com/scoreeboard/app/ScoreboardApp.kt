@@ -6,13 +6,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.scoreeboard.app.navigation.AboutRoute
 import com.scoreeboard.app.navigation.GameRoute
 import com.scoreeboard.app.navigation.HistoryRoute
+import com.scoreeboard.app.navigation.ResumeRoute
 import com.scoreeboard.app.navigation.SetupRoute
 import com.scoreeboard.app.navigation.SummaryRoute
 import com.scoreeboard.app.navigation.WelcomeRoute
+import com.scoreeboard.app.ui.about.AboutScreen
 import com.scoreeboard.app.ui.game.GameScreen
 import com.scoreeboard.app.ui.history.HistoryScreen
+import com.scoreeboard.app.ui.resume.ResumeScreen
 import com.scoreeboard.app.ui.setup.SetupScreen
 import com.scoreeboard.app.ui.summary.SummaryScreen
 import com.scoreeboard.app.ui.welcome.WelcomeScreen
@@ -22,6 +26,7 @@ import com.scoreeboard.app.viewmodel.GameViewModel
 fun ScoreboardApp(vm: GameViewModel) {
     val navController = rememberNavController()
     val history by vm.history.collectAsStateWithLifecycle()
+    val drafts  by vm.drafts.collectAsStateWithLifecycle()
 
     NavHost(
         navController = navController,
@@ -30,7 +35,27 @@ fun ScoreboardApp(vm: GameViewModel) {
         composable<WelcomeRoute> {
             WelcomeScreen(
                 onNewGame = { navController.navigate(SetupRoute) },
-                onHistory = { navController.navigate(HistoryRoute) }
+                onResume  = { navController.navigate(ResumeRoute) },
+                hasDrafts = drafts.isNotEmpty(),
+                onHistory = { navController.navigate(HistoryRoute) },
+                onAbout   = { navController.navigate(AboutRoute) }
+            )
+        }
+
+        composable<AboutRoute> {
+            AboutScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable<ResumeRoute> {
+            ResumeScreen(
+                drafts   = drafts,
+                onResume = { draft ->
+                    vm.resumeGame(draft)
+                    navController.navigate(GameRoute) {
+                        popUpTo(ResumeRoute) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -47,21 +72,26 @@ fun ScoreboardApp(vm: GameViewModel) {
 
         composable<HistoryRoute> {
             HistoryScreen(
-                history = history,
-                onBack = { navController.popBackStack() },
+                history     = history,
+                onBack      = { navController.popBackStack() },
                 onDeleteGame = { id -> vm.deleteGame(id) }
             )
         }
 
         composable<GameRoute> {
             GameScreen(
-                vm = vm,
-                onEndGame = {
+                vm          = vm,
+                onEndGame   = {
                     navController.navigate(SummaryRoute) {
                         popUpTo(GameRoute) { inclusive = true }
                     }
                 },
                 onAbortGame = {
+                    navController.navigate(WelcomeRoute) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onResumeLater = {
                     navController.navigate(WelcomeRoute) {
                         popUpTo(0) { inclusive = true }
                     }
@@ -71,7 +101,7 @@ fun ScoreboardApp(vm: GameViewModel) {
 
         composable<SummaryRoute> {
             SummaryScreen(
-                vm = vm,
+                vm        = vm,
                 onNewGame = {
                     vm.newGame()
                     navController.navigate(WelcomeRoute) {

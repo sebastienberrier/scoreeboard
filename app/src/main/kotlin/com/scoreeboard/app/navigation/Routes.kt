@@ -12,3 +12,5 @@ import kotlinx.serialization.Serializable
 @Serializable object GameRoute
 @Serializable object SummaryRoute
 @Serializable object HistoryRoute
+@Serializable object ResumeRoute
+@Serializable object AboutRoute

@@ -1,7 +1,9 @@
 package com.scoreeboard.app.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.scoreeboard.app.data.DraftsRepository
 import com.scoreeboard.app.data.GamesRepository
+import com.scoreeboard.app.model.DraftGame
 import com.scoreeboard.app.model.GamePhase
 import com.scoreeboard.app.model.GameRecord
 import com.scoreeboard.app.model.GameState
@@ -11,11 +13,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GameViewModel(private val repository: GamesRepository) : ViewModel() {
+class GameViewModel(
+    private val gamesRepository: GamesRepository,
+    private val draftsRepository: DraftsRepository
+) : ViewModel() {
 
     // ── Active game state ────────────────────────────────────────────────────
 
-    /** Single source of truth for the current game session. */
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
@@ -27,13 +31,24 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
     private val _draftScores = MutableStateFlow<Map<Int, String>>(emptyMap())
     val draftScores: StateFlow<Map<Int, String>> = _draftScores.asStateFlow()
 
+    // ── Stable session id ────────────────────────────────────────────────────
+    // Assigned once per game session; used to upsert and delete the draft.
+
+    private var currentSessionId: String? = null
+
     // ── History state ────────────────────────────────────────────────────────
 
     private val _history = MutableStateFlow<List<GameRecord>>(emptyList())
     val history: StateFlow<List<GameRecord>> = _history.asStateFlow()
 
+    // ── Drafts state ─────────────────────────────────────────────────────────
+
+    private val _drafts = MutableStateFlow<List<DraftGame>>(emptyList())
+    val drafts: StateFlow<List<DraftGame>> = _drafts.asStateFlow()
+
     init {
-        _history.value = repository.loadAll()
+        _history.value = gamesRepository.loadAll()
+        _drafts.value = draftsRepository.loadAll()
     }
 
     // ── Setup ────────────────────────────────────────────────────────────────
@@ -43,6 +58,7 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
         val players = playerNames.mapIndexed { idx, name ->
             Player(id = idx, name = name.trim().ifBlank { "Player ${idx + 1}" })
         }
+        currentSessionId = System.currentTimeMillis().toString()
         _gameState.value = GameState(
             title = title.trim(),
             players = players,
@@ -79,7 +95,34 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
         )
     }
 
-    /** Transition PLAYING → SUMMARY and persist the completed game. */
+    /** Save the current game as a draft so it can be resumed later. */
+    fun saveDraft() {
+        val id = currentSessionId ?: return
+        val state = _gameState.value
+        val draft = DraftGame(
+            id = id,
+            title = state.title,
+            savedAt = System.currentTimeMillis(),
+            players = state.players,
+            rounds = state.rounds
+        )
+        draftsRepository.saveDraft(draft)
+        _drafts.value = draftsRepository.loadAll()
+    }
+
+    /** Restore a saved draft as the active game session. */
+    fun resumeGame(draft: DraftGame) {
+        currentSessionId = draft.id
+        _gameState.value = GameState(
+            title = draft.title,
+            players = draft.players,
+            rounds = draft.rounds,
+            phase = GamePhase.PLAYING
+        )
+        resetDraft(draft.players)
+    }
+
+    /** Transition PLAYING → SUMMARY, persist the completed game, and remove its draft. */
     fun endGame() {
         val state = _gameState.value
         _gameState.value = state.copy(phase = GamePhase.SUMMARY)
@@ -91,20 +134,27 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
             players  = state.players,
             rounds   = state.rounds
         )
-        repository.saveGame(record)
-        _history.value = repository.loadAll()
+        gamesRepository.saveGame(record)
+        _history.value = gamesRepository.loadAll()
+
+        currentSessionId?.let { draftsRepository.deleteDraft(it) }
+        _drafts.value = draftsRepository.loadAll()
     }
 
-    /** Delete a saved game from history by its [id]. */
-    fun deleteGame(id: String) {
-        repository.deleteGame(id)
-        _history.value = repository.loadAll()
-    }
-
-    /** Abandon the current game and return to SETUP without saving. */
+    /** Abandon the current game without saving, and remove its draft. */
     fun abortGame() {
+        currentSessionId?.let { draftsRepository.deleteDraft(it) }
+        currentSessionId = null
         _gameState.value = GameState()
         _draftScores.value = emptyMap()
+        _drafts.value = draftsRepository.loadAll()
+    }
+
+    // ── History ──────────────────────────────────────────────────────────────
+
+    fun deleteGame(id: String) {
+        gamesRepository.deleteGame(id)
+        _history.value = gamesRepository.loadAll()
     }
 
     // ── Summary ──────────────────────────────────────────────────────────────
@@ -112,6 +162,7 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
     fun newGame() {
         _gameState.value = GameState()
         _draftScores.value = emptyMap()
+        currentSessionId = null
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

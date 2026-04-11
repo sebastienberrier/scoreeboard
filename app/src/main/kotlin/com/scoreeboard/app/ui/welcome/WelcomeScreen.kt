@@ -14,8 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -34,11 +38,29 @@ import com.scoreeboard.app.ui.theme.BrandPink
 @Composable
 fun WelcomeScreen(
     onNewGame: () -> Unit,
-    onHistory: () -> Unit
+    onResume: () -> Unit,
+    hasDrafts: Boolean,
+    onHistory: () -> Unit,
+    onAbout: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // ── Vertical split background ────────────────────────────────────
+        // ── Info icon — top right ────────────────────────────────────────────
+        IconButton(
+            onClick = onAbout,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "About",
+                tint = BrandDark.copy(alpha = 0.45f),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        // ── Vertical split background ────────────────────────────────────────
         Row(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
@@ -54,7 +76,7 @@ fun WelcomeScreen(
             )
         }
 
-        // ── Centered content ─────────────────────────────────────────────
+        // ── Centered content ─────────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -62,7 +84,6 @@ fun WelcomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App icon
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = null,
@@ -71,7 +92,6 @@ fun WelcomeScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // App name
             Text(
                 text = "ScoreeBoard",
                 style = MaterialTheme.typography.displaySmall,
@@ -81,7 +101,6 @@ fun WelcomeScreen(
 
             Spacer(Modifier.height(6.dp))
 
-            // Tagline
             Text(
                 text = "Keep score, enjoy the game",
                 style = MaterialTheme.typography.bodyLarge,
@@ -90,7 +109,7 @@ fun WelcomeScreen(
 
             Spacer(Modifier.height(56.dp))
 
-            // New Game button
+            // ── New Game ──────────────────────────────────────────────────────
             Button(
                 onClick = onNewGame,
                 modifier = Modifier.fillMaxWidth(),
@@ -99,27 +118,32 @@ fun WelcomeScreen(
                     contentColor = Color.White
                 )
             ) {
-                Text(
-                    text = "New Game",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text(text = "New Game", style = MaterialTheme.typography.titleMedium)
+            }
+
+            // ── Resume Game (only shown when drafts exist) ────────────────────
+            if (hasDrafts) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onResume,
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.5.dp, BrandDark),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandDark)
+                ) {
+                    Text(text = "Resume Game", style = MaterialTheme.typography.titleMedium)
+                }
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // History button
+            // ── History ───────────────────────────────────────────────────────
             OutlinedButton(
                 onClick = onHistory,
                 modifier = Modifier.fillMaxWidth(),
                 border = BorderStroke(1.5.dp, BrandDark),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = BrandDark
-                )
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandDark)
             ) {
-                Text(
-                    text = "History",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text(text = "History", style = MaterialTheme.typography.titleMedium)
             }
         }
     }
