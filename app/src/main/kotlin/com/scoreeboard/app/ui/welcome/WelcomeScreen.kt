@@ -1,6 +1,7 @@
 package com.scoreeboard.app.ui.welcome
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,105 +46,99 @@ fun WelcomeScreen(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // ── Info icon — top right ────────────────────────────────────────────
-        IconButton(
-            onClick = onAbout,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = "About",
-                tint = BrandDark.copy(alpha = 0.45f),
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
         // ── Vertical split background ────────────────────────────────────────
         Row(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(1f)
-                    .background(BrandPink)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(1f)
-                    .background(BrandMint)
-            )
+            Box(Modifier.fillMaxHeight().weight(1f).background(BrandPink))
+            Box(Modifier.fillMaxHeight().weight(1f).background(BrandMint))
         }
 
-        // ── Centered content ─────────────────────────────────────────────────
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(140.dp)
-            )
+        // ── Full-height column: icon row on top, content centered below ───────
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
 
-            Spacer(Modifier.height(20.dp))
-
-            Text(
-                text = "ScoreeBoard",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = BrandDark
-            )
-
-            Spacer(Modifier.height(6.dp))
-
-            Text(
-                text = "Keep score, enjoy the game",
-                style = MaterialTheme.typography.bodyLarge,
-                color = BrandDark.copy(alpha = 0.65f)
-            )
-
-            Spacer(Modifier.height(56.dp))
-
-            // ── New Game ──────────────────────────────────────────────────────
-            Button(
-                onClick = onNewGame,
+            // Icon row — owns its own row, no z-order conflict
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BrandDark,
-                    contentColor = Color.White
-                )
+                horizontalArrangement = Arrangement.End
             ) {
-                Text(text = "New Game", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onAbout) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = "About",
+                        tint = BrandDark.copy(alpha = 0.45f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
-            // ── Resume Game (only shown when drafts exist) ────────────────────
-            if (hasDrafts) {
+            // Centered content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.size(140.dp)
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Text(
+                    text = "ScoreeBoard",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandDark
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = "Keep score, enjoy the game",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = BrandDark.copy(alpha = 0.65f)
+                )
+
+                Spacer(Modifier.height(56.dp))
+
+                // ── New Game ──────────────────────────────────────────────────
+                Button(
+                    onClick = onNewGame,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BrandDark,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(text = "New Game", style = MaterialTheme.typography.titleMedium)
+                }
+
+                // ── Resume Game (only shown when drafts exist) ────────────────
+                if (hasDrafts) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = onResume,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.5.dp, BrandDark),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandDark)
+                    ) {
+                        Text(text = "Resume Game", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+
                 Spacer(Modifier.height(12.dp))
+
+                // ── History ───────────────────────────────────────────────────
                 OutlinedButton(
-                    onClick = onResume,
+                    onClick = onHistory,
                     modifier = Modifier.fillMaxWidth(),
                     border = BorderStroke(1.5.dp, BrandDark),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandDark)
                 ) {
-                    Text(text = "Resume Game", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "History", style = MaterialTheme.typography.titleMedium)
                 }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // ── History ───────────────────────────────────────────────────────
-            OutlinedButton(
-                onClick = onHistory,
-                modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.5.dp, BrandDark),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = BrandDark)
-            ) {
-                Text(text = "History", style = MaterialTheme.typography.titleMedium)
             }
         }
     }
