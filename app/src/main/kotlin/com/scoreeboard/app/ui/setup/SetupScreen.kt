@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,8 +41,7 @@ private const val MAX_PLAYERS = 6
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupScreen(
-    onStartGame: (title: String, playerNames: List<String>) -> Unit,
-    onShowHistory: () -> Unit
+    onStartGame: (title: String, playerNames: List<String>) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
 
@@ -55,12 +53,7 @@ fun SetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Game") },
-                actions = {
-                    IconButton(onClick = onShowHistory) {
-                        Icon(Icons.Default.History, contentDescription = "Game history")
-                    }
-                }
+                title = { Text("New Game") }
             )
         }
     ) { padding ->

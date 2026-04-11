@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
  * No arguments are passed between screens because all state lives
  * in the shared GameViewModel scoped to the Activity.
  */
+@Serializable object WelcomeRoute
 @Serializable object SetupRoute
 @Serializable object GameRoute
 @Serializable object SummaryRoute

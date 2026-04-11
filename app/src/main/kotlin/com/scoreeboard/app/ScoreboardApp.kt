@@ -10,10 +10,12 @@ import com.scoreeboard.app.navigation.GameRoute
 import com.scoreeboard.app.navigation.HistoryRoute
 import com.scoreeboard.app.navigation.SetupRoute
 import com.scoreeboard.app.navigation.SummaryRoute
+import com.scoreeboard.app.navigation.WelcomeRoute
 import com.scoreeboard.app.ui.game.GameScreen
 import com.scoreeboard.app.ui.history.HistoryScreen
 import com.scoreeboard.app.ui.setup.SetupScreen
 import com.scoreeboard.app.ui.summary.SummaryScreen
+import com.scoreeboard.app.ui.welcome.WelcomeScreen
 import com.scoreeboard.app.viewmodel.GameViewModel
 
 @Composable
@@ -23,8 +25,15 @@ fun ScoreboardApp(vm: GameViewModel) {
 
     NavHost(
         navController = navController,
-        startDestination = SetupRoute
+        startDestination = WelcomeRoute
     ) {
+        composable<WelcomeRoute> {
+            WelcomeScreen(
+                onNewGame = { navController.navigate(SetupRoute) },
+                onHistory = { navController.navigate(HistoryRoute) }
+            )
+        }
+
         composable<SetupRoute> {
             SetupScreen(
                 onStartGame = { title, names ->
@@ -32,9 +41,6 @@ fun ScoreboardApp(vm: GameViewModel) {
                     navController.navigate(GameRoute) {
                         popUpTo(SetupRoute) { inclusive = true }
                     }
-                },
-                onShowHistory = {
-                    navController.navigate(HistoryRoute)
                 }
             )
         }
@@ -55,8 +61,8 @@ fun ScoreboardApp(vm: GameViewModel) {
                     }
                 },
                 onAbortGame = {
-                    navController.navigate(SetupRoute) {
-                        popUpTo(GameRoute) { inclusive = true }
+                    navController.navigate(WelcomeRoute) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
@@ -67,8 +73,8 @@ fun ScoreboardApp(vm: GameViewModel) {
                 vm = vm,
                 onNewGame = {
                     vm.newGame()
-                    navController.navigate(SetupRoute) {
-                        popUpTo(SummaryRoute) { inclusive = true }
+                    navController.navigate(WelcomeRoute) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
