@@ -48,7 +48,8 @@ fun ScoreboardApp(vm: GameViewModel) {
         composable<HistoryRoute> {
             HistoryScreen(
                 history = history,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onDeleteGame = { id -> vm.deleteGame(id) }
             )
         }
 

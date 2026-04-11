@@ -95,6 +95,12 @@ class GameViewModel(private val repository: GamesRepository) : ViewModel() {
         _history.value = repository.loadAll()
     }
 
+    /** Delete a saved game from history by its [id]. */
+    fun deleteGame(id: String) {
+        repository.deleteGame(id)
+        _history.value = repository.loadAll()
+    }
+
     /** Abandon the current game and return to SETUP without saving. */
     fun abortGame() {
         _gameState.value = GameState()

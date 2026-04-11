@@ -29,6 +29,12 @@ class GamesRepository(context: Context) {
         file.writeText(json.encodeToString(games))
     }
 
+    /** Remove the game with the given [id]. No-op if not found. */
+    fun deleteGame(id: String) {
+        val games = loadAll().filterNot { it.id == id }
+        file.writeText(json.encodeToString(games))
+    }
+
     /** Return all stored games (newest first), or an empty list if none yet. */
     fun loadAll(): List<GameRecord> {
         if (!file.exists()) return emptyList()
