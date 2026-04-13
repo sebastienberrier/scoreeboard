@@ -1,8 +1,10 @@
 package com.scoreeboard.app.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import com.scoreeboard.app.data.DraftsRepository
 import com.scoreeboard.app.data.GamesRepository
+import com.scoreeboard.app.data.PhotoRepository
 import com.scoreeboard.app.model.DraftGame
 import com.scoreeboard.app.model.GamePhase
 import com.scoreeboard.app.model.GameRecord
@@ -15,7 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class GameViewModel(
     private val gamesRepository: GamesRepository,
-    private val draftsRepository: DraftsRepository
+    private val draftsRepository: DraftsRepository,
+    private val photoRepository: PhotoRepository
 ) : ViewModel() {
 
     // ── Active game state ────────────────────────────────────────────────────
@@ -23,18 +26,16 @@ class GameViewModel(
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
-    /**
-     * Draft scores being entered for the current round.
-     * Values are [String] so blank fields are never coerced to "0".
-     * Key = Player.id.
-     */
     private val _draftScores = MutableStateFlow<Map<Int, String>>(emptyMap())
     val draftScores: StateFlow<Map<Int, String>> = _draftScores.asStateFlow()
 
-    // ── Stable session id ────────────────────────────────────────────────────
-    // Assigned once per game session; used to upsert and delete the draft.
+    // ── Session ids ──────────────────────────────────────────────────────────
 
+    /** Stable id for the current game session (draft / save key). */
     private var currentSessionId: String? = null
+
+    /** Id of the most recently saved [GameRecord]; used by photo functions. */
+    private var lastSavedGameId: String? = null
 
     // ── History state ────────────────────────────────────────────────────────
 
@@ -45,6 +46,12 @@ class GameViewModel(
 
     private val _drafts = MutableStateFlow<List<DraftGame>>(emptyList())
     val drafts: StateFlow<List<DraftGame>> = _drafts.asStateFlow()
+
+    // ── Photo state (Summary screen) ──────────────────────────────────────────
+
+    /** URI of the photo attached to the just-finished game, or null. */
+    private val _currentPhotoUri = MutableStateFlow<String?>(null)
+    val currentPhotoUri: StateFlow<String?> = _currentPhotoUri.asStateFlow()
 
     init {
         _history.value = gamesRepository.loadAll()
@@ -85,7 +92,6 @@ class GameViewModel(
         resetDraft(state.players)
     }
 
-    /** Replace the scores of an already-submitted round. */
     fun updateRound(roundNumber: Int, newScores: Map<Int, Int>) {
         val state = _gameState.value
         _gameState.value = state.copy(
@@ -95,7 +101,6 @@ class GameViewModel(
         )
     }
 
-    /** Save the current game as a draft so it can be resumed later. */
     fun saveDraft() {
         val id = currentSessionId ?: return
         val state = _gameState.value
@@ -110,7 +115,6 @@ class GameViewModel(
         _drafts.value = draftsRepository.loadAll()
     }
 
-    /** Restore a saved draft as the active game session. */
     fun resumeGame(draft: DraftGame) {
         currentSessionId = draft.id
         _gameState.value = GameState(
@@ -122,13 +126,17 @@ class GameViewModel(
         resetDraft(draft.players)
     }
 
-    /** Transition PLAYING → SUMMARY, persist the completed game, and remove its draft. */
+    /** Transition PLAYING → SUMMARY, persist the completed game, and clean up draft. */
     fun endGame() {
         val state = _gameState.value
         _gameState.value = state.copy(phase = GamePhase.SUMMARY)
 
+        val id = System.currentTimeMillis().toString()
+        lastSavedGameId = id
+        _currentPhotoUri.value = null
+
         val record = GameRecord(
-            id       = System.currentTimeMillis().toString(),
+            id       = id,
             title    = state.title,
             playedAt = System.currentTimeMillis(),
             players  = state.players,
@@ -141,7 +149,6 @@ class GameViewModel(
         _drafts.value = draftsRepository.loadAll()
     }
 
-    /** Abandon the current game without saving, and remove its draft. */
     fun abortGame() {
         currentSessionId?.let { draftsRepository.deleteDraft(it) }
         currentSessionId = null
@@ -150,22 +157,69 @@ class GameViewModel(
         _drafts.value = draftsRepository.loadAll()
     }
 
-    // ── History ──────────────────────────────────────────────────────────────
+    // ── Photo — Summary screen ────────────────────────────────────────────────
+
+    /**
+     * Creates a MediaStore entry for the camera to write into.
+     * The returned URI must be passed to TakePicture; call [onCameraPhotoTaken]
+     * on success or [deletePendingCameraUri] on cancellation.
+     */
+    fun createCameraUri(): Uri? = photoRepository.createCameraUri(lastSavedGameId ?: "tmp")
+
+    /** Called after a successful camera capture — photo is already in MediaStore. */
+    fun onCameraPhotoTaken(cameraUri: Uri) {
+        updateCurrentGamePhoto(cameraUri.toString())
+    }
+
+    /** Copies a gallery-picked URI into Pictures/ScoreeBoard and attaches it. */
+    fun attachPhotoFromGallery(sourceUri: Uri) {
+        val id = lastSavedGameId ?: return
+        val saved = photoRepository.copyToGallery(sourceUri, id) ?: return
+        updateCurrentGamePhoto(saved.toString())
+    }
+
+    /** Removes the photo from the current game and deletes it from MediaStore. */
+    fun removePhoto() {
+        val id = lastSavedGameId ?: return
+        _currentPhotoUri.value?.let { photoRepository.deletePhoto(it) }
+        _currentPhotoUri.value = null
+        updateRecordPhoto(id, null)
+    }
+
+    /** Removes a cancelled camera URI that was never confirmed. */
+    fun deletePendingCameraUri(uri: Uri) {
+        photoRepository.deletePhoto(uri.toString())
+    }
+
+    // ── Photo — History / sharing ─────────────────────────────────────────────
+
+    /**
+     * Generates a 1080×1080 share image (photo + dark overlay + scores).
+     * Returns a FileProvider URI, or null on failure.
+     */
+    fun createShareImage(record: GameRecord): Uri? =
+        try { photoRepository.createShareImage(record) } catch (_: Exception) { null }
+
+    // ── History ───────────────────────────────────────────────────────────────
 
     fun deleteGame(id: String) {
+        // Also clean up the photo from MediaStore
+        _history.value.find { it.id == id }?.photoPath?.let { photoRepository.deletePhoto(it) }
         gamesRepository.deleteGame(id)
         _history.value = gamesRepository.loadAll()
     }
 
-    // ── Summary ──────────────────────────────────────────────────────────────
+    // ── Summary ───────────────────────────────────────────────────────────────
 
     fun newGame() {
         _gameState.value = GameState()
         _draftScores.value = emptyMap()
         currentSessionId = null
+        lastSavedGameId = null
+        _currentPhotoUri.value = null
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun resetDraft(players: List<Player>) {
         _draftScores.value = players.associate { it.id to "" }
@@ -173,4 +227,15 @@ class GameViewModel(
 
     fun isDraftValid(): Boolean =
         _draftScores.value.values.all { it.isBlank() || it.toIntOrNull() != null }
+
+    private fun updateCurrentGamePhoto(uriString: String) {
+        _currentPhotoUri.value = uriString
+        updateRecordPhoto(lastSavedGameId ?: return, uriString)
+    }
+
+    private fun updateRecordPhoto(gameId: String, photoUri: String?) {
+        val record = gamesRepository.loadAll().find { it.id == gameId } ?: return
+        gamesRepository.updateGame(record.copy(photoPath = photoUri))
+        _history.value = gamesRepository.loadAll()
+    }
 }

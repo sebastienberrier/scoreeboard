@@ -29,6 +29,12 @@ class GamesRepository(context: Context) {
         file.writeText(json.encodeToString(games))
     }
 
+    /** Replace the stored record that shares [record.id]. No-op if not found. */
+    fun updateGame(record: GameRecord) {
+        val games = loadAll().map { if (it.id == record.id) record else it }
+        file.writeText(json.encodeToString(games))
+    }
+
     /** Remove the game with the given [id]. No-op if not found. */
     fun deleteGame(id: String) {
         val games = loadAll().filterNot { it.id == id }
