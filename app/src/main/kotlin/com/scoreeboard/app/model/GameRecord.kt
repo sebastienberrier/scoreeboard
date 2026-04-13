@@ -14,7 +14,9 @@ data class GameRecord(
     /** Unix epoch in milliseconds — used for display and sorting. */
     val playedAt: Long,
     val players: List<Player>,
-    val rounds: List<Round>
+    val rounds: List<Round>,
+    /** content:// URI of a photo stored in MediaStore Pictures/ScoreeBoard, or null. */
+    val photoPath: String? = null
 ) {
     /** Cumulative total for a given player. */
     fun totalFor(playerId: Int): Int =

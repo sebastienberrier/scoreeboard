@@ -1,9 +1,15 @@
 package com.scoreeboard.app
 
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.scoreeboard.app.navigation.AboutRoute
@@ -25,6 +31,8 @@ import com.scoreeboard.app.viewmodel.GameViewModel
 @Composable
 fun ScoreboardApp(vm: GameViewModel) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val history by vm.history.collectAsStateWithLifecycle()
     val drafts  by vm.drafts.collectAsStateWithLifecycle()
 
@@ -72,9 +80,24 @@ fun ScoreboardApp(vm: GameViewModel) {
 
         composable<HistoryRoute> {
             HistoryScreen(
-                history     = history,
-                onBack      = { navController.popBackStack() },
-                onDeleteGame = { id -> vm.deleteGame(id) }
+                history      = history,
+                onBack       = { navController.popBackStack() },
+                onDeleteGame = { id -> vm.deleteGame(id) },
+                onShareGame  = { record ->
+                    scope.launch {
+                        val shareUri = withContext(Dispatchers.IO) {
+                            vm.createShareImage(record)
+                        }
+                        if (shareUri != null) {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/jpeg"
+                                putExtra(Intent.EXTRA_STREAM, shareUri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share scores"))
+                        }
+                    }
+                }
             )
         }
 

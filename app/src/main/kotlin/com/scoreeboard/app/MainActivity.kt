@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.scoreeboard.app.data.DraftsRepository
 import com.scoreeboard.app.data.GamesRepository
+import com.scoreeboard.app.data.PhotoRepository
 import com.scoreeboard.app.ui.theme.ScoreboardTheme
 import com.scoreeboard.app.viewmodel.GameViewModel
 
@@ -19,10 +20,11 @@ class MainActivity : ComponentActivity() {
         // called on first creation, so the same instance is reused across rotations.
         val gamesRepository = GamesRepository(applicationContext)
         val draftsRepository = DraftsRepository(applicationContext)
+        val photoRepository = PhotoRepository(applicationContext)
 
         setContent {
             ScoreboardTheme {
-                val vm: GameViewModel = viewModel { GameViewModel(gamesRepository, draftsRepository) }
+                val vm: GameViewModel = viewModel { GameViewModel(gamesRepository, draftsRepository, photoRepository) }
                 ScoreboardApp(vm)
             }
         }

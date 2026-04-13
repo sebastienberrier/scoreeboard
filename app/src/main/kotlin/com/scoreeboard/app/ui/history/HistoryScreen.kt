@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,8 +20,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,8 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.scoreeboard.app.model.GameRecord
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,16 +60,14 @@ private val dateFormat = SimpleDateFormat("dd/MM/yyyy  HH:mm", Locale.getDefault
 fun HistoryScreen(
     history: List<GameRecord>,
     onBack: () -> Unit,
-    onDeleteGame: (String) -> Unit = {}
+    onDeleteGame: (String) -> Unit = {},
+    onShareGame: (GameRecord) -> Unit = {}
 ) {
-    // IDs currently selected for deletion (non-empty = selection mode)
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     val inSelectionMode = selectedIds.isNotEmpty()
-
-    // Show confirmation dialog when user taps the delete action
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // ── Confirmation dialog ──────────────────────────────────────────────────
+    // ── Delete confirmation dialog ────────────────────────────────────────────
     if (showDeleteDialog) {
         val count = selectedIds.size
         val label = if (count == 1) "1 game" else "$count games"
@@ -77,14 +80,10 @@ fun HistoryScreen(
                     selectedIds.forEach { id -> onDeleteGame(id) }
                     selectedIds = emptySet()
                     showDeleteDialog = false
-                }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -92,15 +91,9 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        if (inSelectionMode) "${selectedIds.size} selected"
-                        else "History"
-                    )
-                },
+                title = { Text(if (inSelectionMode) "${selectedIds.size} selected" else "History") },
                 navigationIcon = {
                     if (inSelectionMode) {
-                        // Exit selection mode
                         IconButton(onClick = { selectedIds = emptySet() }) {
                             Icon(Icons.Default.Close, contentDescription = "Cancel selection")
                         }
@@ -113,11 +106,8 @@ fun HistoryScreen(
                 actions = {
                     if (inSelectionMode) {
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Delete selected",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                            Icon(Icons.Default.Delete, contentDescription = "Delete selected",
+                                tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -125,11 +115,8 @@ fun HistoryScreen(
         }
     ) { padding ->
         if (history.isEmpty()) {
-            // ── Empty state ──────────────────────────────────────────────────
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize().padding(padding),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -138,9 +125,7 @@ fun HistoryScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+                modifier = Modifier.fillMaxSize().padding(padding)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -152,18 +137,12 @@ fun HistoryScreen(
                         inSelectionMode = inSelectionMode,
                         onClick = {
                             if (inSelectionMode) {
-                                // Toggle selection
-                                selectedIds = if (isSelected)
-                                    selectedIds - record.id
-                                else
-                                    selectedIds + record.id
+                                selectedIds = if (isSelected) selectedIds - record.id
+                                             else selectedIds + record.id
                             }
-                            // expand/collapse is handled inside the card when not in selection mode
                         },
-                        onLongPress = {
-                            // Enter selection mode and select this card
-                            selectedIds = selectedIds + record.id
-                        }
+                        onLongPress = { selectedIds = selectedIds + record.id },
+                        onShare = { onShareGame(record) }
                     )
                 }
             }
@@ -178,40 +157,32 @@ private fun GameRecordCard(
     isSelected: Boolean,
     inSelectionMode: Boolean,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onShare: () -> Unit
 ) {
-    // Expand/collapse only works outside selection mode
     var expanded by remember { mutableStateOf(false) }
     val ranking = record.ranking()
     val winner = ranking.firstOrNull()
     val displayTitle = record.title.ifBlank { "Untitled game" }
-
     val borderColor = MaterialTheme.colorScheme.primary
-    val selectedBg = MaterialTheme.colorScheme.primaryContainer
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (isSelected) Modifier.border(2.dp, borderColor, MaterialTheme.shapes.medium)
-                else Modifier
-            )
+            .then(if (isSelected) Modifier.border(2.dp, borderColor, MaterialTheme.shapes.medium) else Modifier)
             .combinedClickable(
-                onClick = {
-                    if (inSelectionMode) onClick()
-                    else expanded = !expanded
-                },
+                onClick = { if (inSelectionMode) onClick() else expanded = !expanded },
                 onLongClick = onLongPress
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) selectedBg
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                              else MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
 
-            // ── Header: title + date (+ checkmark badge when selected) ───────
+            // ── Header: title + date ──────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -224,84 +195,104 @@ private fun GameRecordCard(
                 ) {
                     if (isSelected) {
                         Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(CircleShape)
+                            modifier = Modifier.size(18.dp).clip(CircleShape)
                                 .background(borderColor),
                             contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "✓",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                        ) { Text("✓", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary) }
                     }
-                    Text(
-                        text = displayTitle,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text(text = displayTitle, style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold)
                 }
-                Text(
-                    text = dateFormat.format(Date(record.playedAt)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Subtle camera indicator
+                    if (record.photoPath != null && !isSelected) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = "Has photo",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                    Text(text = dateFormat.format(Date(record.playedAt)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
             Spacer(Modifier.height(4.dp))
 
-            // ── Winner + round count ─────────────────────────────────────────
+            // ── Winner + round count ──────────────────────────────────────────
             if (winner != null) {
-                Text(
-                    text = "🏆 ${winner.first.name}  •  ${winner.second} pts",
+                Text(text = "🏆 ${winner.first.name}  •  ${winner.second} pts",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                    color = MaterialTheme.colorScheme.primary)
             }
             Text(
-                text = "${record.rounds.size} round${if (record.rounds.size > 1) "s" else ""}  •  ${record.players.size} players",
+                text = "${record.rounds.size} round${if (record.rounds.size != 1) "s" else ""}  •  ${record.players.size} players",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // ── Expanded: full ranking (only outside selection mode) ─────────
+            // ── Expanded content ──────────────────────────────────────────────
             if (!inSelectionMode && expanded) {
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
+
+                // Photo (if any)
+                if (record.photoPath != null) {
+                    AsyncImage(
+                        model = record.photoPath,
+                        contentDescription = "Game photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .clip(MaterialTheme.shapes.small)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // Scores
                 Text("Final scores", style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 ranking.forEachIndexed { index, (player, total) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "#${index + 1}  ${player.name}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "$total pts",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("#${index + 1}  ${player.name}",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("$total pts", style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold)
                     }
                 }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Share button
+                ShareButton(record = record, onShare = onShare)
             }
 
             // ── Tap hint ─────────────────────────────────────────────────────
             if (!inSelectionMode) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (expanded) "Tap to collapse" else "Tap to see scores  •  Hold to select",
+                    text = if (expanded) "Tap to collapse"
+                           else "Tap to see scores  •  Hold to select",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ShareButton(record: GameRecord, onShare: () -> Unit) {
+    TextButton(onClick = onShare, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.size(8.dp))
+        Text("Share scores")
     }
 }
