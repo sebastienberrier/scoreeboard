@@ -236,7 +236,7 @@ fun SummaryScreen(
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
             ) {
-                Text("New Game")
+                Text("Home")
             }
         }
     }
