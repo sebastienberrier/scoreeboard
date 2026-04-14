@@ -43,25 +43,3 @@ app/src/main/kotlin/com/scoreeboard/app/
     └── theme/
 ```
 
-## Build & run
-
-**Android Studio**
-
-1. Open `C:\Dev\scoreeboard`
-2. Sync Gradle
-3. Run on emulator or device
-
-**Command line (PowerShell)**
-
-```powershell
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-.\gradlew.bat assembleDebug
-.\gradlew.bat installDebug
-```
-
-## Install on a friend's phone (no USB)
-
-1. **Build → Build APK(s)** in Android Studio
-2. Find the APK at `app/build/outputs/apk/debug/app-debug.apk`
-3. Send it via WhatsApp, Drive, email, etc.
-4. On their phone: open the file and allow installation from unknown sources when prompted
