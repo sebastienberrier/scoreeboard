@@ -61,7 +61,7 @@ class GameViewModel(
     // ── Setup ────────────────────────────────────────────────────────────────
 
     fun startGame(title: String, playerNames: List<String>) {
-        require(playerNames.size in 2..6) { "Player count must be between 2 and 6." }
+        require(playerNames.size in 2..10) { "Player count must be between 2 and 10." }
         val players = playerNames.mapIndexed { idx, name ->
             Player(id = idx, name = name.trim().ifBlank { "Player ${idx + 1}" })
         }

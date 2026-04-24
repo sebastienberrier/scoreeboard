@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -218,25 +219,31 @@ fun GameScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 8.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         text = "Round ${state.rounds.size + 1}",
                         style = MaterialTheme.typography.titleMedium
                     )
+                    Spacer(Modifier.height(8.dp))
 
-                    state.players.forEachIndexed { index, player ->
-                        ScoreInputRow(
-                            player = player,
-                            value = draftScores[player.id] ?: "",
-                            onValueChange = { vm.updateDraftScore(player.id, it) },
-                            isLast = index == state.players.lastIndex
-                        )
+                    // Scrollable score fields — keeps Submit button always visible
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 260.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        state.players.forEachIndexed { index, player ->
+                            ScoreInputRow(
+                                player = player,
+                                value = draftScores[player.id] ?: "",
+                                onValueChange = { vm.updateDraftScore(player.id, it) },
+                                isLast = index == state.players.lastIndex
+                            )
+                        }
                     }
 
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     Button(
                         onClick = { vm.submitRound() },
