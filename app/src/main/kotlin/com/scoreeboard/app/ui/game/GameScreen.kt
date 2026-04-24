@@ -220,13 +220,28 @@ fun GameScreen(
                     .padding(horizontal = 8.dp, vertical = 8.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Round ${state.rounds.size + 1}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+
+                    // Round title + Submit button on the same row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Round ${state.rounds.size + 1}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Button(
+                            onClick = { vm.submitRound() },
+                            enabled = isDraftValid
+                        ) {
+                            Text("Submit")
+                        }
+                    }
+
                     Spacer(Modifier.height(8.dp))
 
-                    // Scrollable score fields — keeps Submit button always visible
+                    // Scrollable score fields
                     Column(
                         modifier = Modifier
                             .heightIn(max = 260.dp)
@@ -241,16 +256,6 @@ fun GameScreen(
                                 isLast = index == state.players.lastIndex
                             )
                         }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Button(
-                        onClick = { vm.submitRound() },
-                        enabled = isDraftValid,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Submit Round")
                     }
                 }
             }
